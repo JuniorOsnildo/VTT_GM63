@@ -17,25 +17,40 @@ namespace VTT.Unity
             this.gridManager = gridManager;
         }
 
-        public void DrawPath(List<GridCoordinate> path)
+        public void DrawPath(List<GridCoordinate> path, Color pathColor)
         {
-            ClearPath();
-
             foreach (var coord in path)
             {
-                GameObject pathMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                pathMarker.name = $"PathMaker_{coord.X}_{coord.Y}";
-                
-                Collider col =  pathMarker.GetComponent<Collider>();
-                if (col != null) Object.Destroy(col);
-                
-                Renderer renderer = pathMarker.GetComponent<Renderer>();
-                renderer.material.color = Color.yellow;
-                
-                Vector3 worldPos = gridManager.GridCoordToWorldPosition(coord);
-                pathMarker.transform.position = new Vector3(worldPos.x, 0.15f, worldPos.z);
-                pathMarker.transform.localScale = new Vector3(0.8f, 0.05f, 0.8f);  // achatado
-                
+                GameObject pathMarker =
+                    GameObject.CreatePrimitive(PrimitiveType.Cube);
+
+                pathMarker.name =
+                    $"PathMarker_{coord.X}_{coord.Y}";
+
+                Collider col =
+                    pathMarker.GetComponent<Collider>();
+
+                if (col != null)
+                    Object.Destroy(col);
+
+                Renderer renderer =
+                    pathMarker.GetComponent<Renderer>();
+
+                renderer.material.color = pathColor;
+
+                Vector3 worldPos =
+                    gridManager.GridCoordToWorldPosition(coord);
+
+                pathMarker.transform.position =
+                    new Vector3(
+                        worldPos.x,
+                        0.15f,
+                        worldPos.z
+                    );
+
+                pathMarker.transform.localScale =
+                    new Vector3(0.8f, 0.05f, 0.8f);
+
                 pathVisuals.Add(pathMarker);
             }
         }

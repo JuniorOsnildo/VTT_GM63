@@ -23,35 +23,9 @@ namespace VTT.Unity
             
             // Renderiza
             RenderGrid();
-            
-            //temporario pra teste
-            CreatePlayerToken();
         }
         
-        /*
-        private void CreatePlayerToken()
-        {
-            
-            GameObject tokenObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            tokenObj.name = "PlayerToken";
-            
-            
-            Renderer renderer = tokenObj.GetComponent<Renderer>();
-            renderer.material.color = new Color(1f, 0f, 0f);
-    
-            // Redimensiona (menor que as células)
-            tokenObj.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
-            
-            playerToken = tokenObj.AddComponent<TokenVisual>();
-            
-            var startCoord = new GridCoordinate(gridWidth / 2, gridHeight / 2);
-            playerToken.Initialize(startCoord, this);
-            
-            Physics.SyncTransforms();
-        }
-        */
-        
-        public TokenVisual CreateToken(string tokenName, int maxMovement, GridCoordinate coord)
+        public TokenVisual CreateToken(string tokenName, int maxMovement,Faction faction, GridCoordinate coord)
         {
             GameObject tokenObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
 
@@ -59,11 +33,11 @@ namespace VTT.Unity
 
             Renderer renderer = tokenObj.GetComponent<Renderer>();
 
-            renderer.material.color = Color.red;
+            renderer.material.color = Color.cornflowerBlue;
 
             tokenObj.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
 
-            Token token = new Token(tokenName, coord, maxMovement);
+            Token token = new Token(tokenName, coord, faction, maxMovement);
 
             TokenVisual visual = tokenObj.AddComponent<TokenVisual>();
 

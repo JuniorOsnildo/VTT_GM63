@@ -1,4 +1,5 @@
-﻿using TMPro;
+﻿using Core;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,13 +12,20 @@ namespace VTT.Unity
 
         [SerializeField]
         private TMP_InputField movementInput;
+        
+        [SerializeField]
+        private TMP_Dropdown factionDropdown;
+        
+        [SerializeField]
+        private TMP_Text statusText;
 
         [SerializeField]
         private Button createButton;
 
         private string pendingName;
         private int pendingMovement;
-
+        private Faction pendingFaction;
+        
         public bool IsWaitingForPlacement { get; private set; }
 
         private void Start()
@@ -60,15 +68,28 @@ namespace VTT.Unity
 
                 return;
             }
+            
+            switch (factionDropdown.value)
+            {
+                case 0:
+                    pendingFaction = Faction.Ally;
+                    break;
+
+                case 1:
+                    pendingFaction = Faction.Enemie;
+                    break;
+
+                case 2:
+                    pendingFaction = Faction.Neutral;
+                    break;
+            }
 
             pendingName = tokenName;
             pendingMovement = movement;
-
+            
             IsWaitingForPlacement = true;
-
-            Debug.Log(
-                $"[TOKEN] Clique em uma célula para posicionar {pendingName}."
-            );
+            
+            statusText.text = $"Escolha onde posicionar o token.";
         }
 
         public string GetPendingName()
@@ -80,6 +101,11 @@ namespace VTT.Unity
         {
             return pendingMovement;
         }
+        
+        public Faction GetPendingFaction()
+        {
+            return pendingFaction;
+        }
 
         public void FinishPlacement()
         {
@@ -87,6 +113,8 @@ namespace VTT.Unity
 
             tokenNameInput.text = "";
             movementInput.text = "";
+            
+            statusText.text = "";
         }
     }
 }

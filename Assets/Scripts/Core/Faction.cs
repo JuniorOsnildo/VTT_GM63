@@ -2,8 +2,8 @@
 {
     public enum Faction
     {
-        Players,
-        Enemies,
+        Ally,
+        Enemie,
         Neutral
     }
 }
