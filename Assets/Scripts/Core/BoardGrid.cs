@@ -44,12 +44,6 @@ namespace Core
             return coordinate.X >= 0 && coordinate.X < width && coordinate.Y >= 0 && coordinate.Y < height;
         }
 
-        [CanBeNull]
-        public Token GetOccupantToken(GridCoordinate coordinate)
-        {
-            return occupancy[coordinate];
-        }
-
         public List<GridCoordinate> GetNeighbors(GridCoordinate coordinate)
         {
             var neighbors = new List<GridCoordinate>();
@@ -67,7 +61,7 @@ namespace Core
 
             return neighbors;
         }
-
+        
         [CanBeNull]
         private Token GetOccupant(GridCoordinate coord)
         {
@@ -86,11 +80,49 @@ namespace Core
             return dx != 0 && dy != 0;
         }
 
-        public int GetMovementCost(GridCoordinate from, GridCoordinate to)
+        public int GetMovementCost(GridCoordinate from, GridCoordinate to, Token movingToken)
         {
-            var costTo = IsOccupied(to) ? (int)TerrainType.Difficult : grid[to.X, to.Y].BaseCost;
+            GridCell targetCell = grid[to.X, to.Y];
 
-            return IsDiagonal(from, to) ? costTo * 2 : costTo;
+            int costTo = targetCell.BaseCost;
+
+            Token occupant = GetOccupant(to);
+            
+            if (occupant != null && occupant != movingToken)
+            {
+                if (occupant.Faction != movingToken.Faction)
+                {
+                    costTo = (int)TerrainType.Difficult;
+                }
+            }
+
+            return IsDiagonal(from, to)
+                ? costTo * 2
+                : costTo;
+        }
+        
+        public void PlaceToken(Token token, GridCoordinate coord)
+        {
+            if (!IsValidCoordinate(coord))
+                return;
+
+            occupancy[coord] = token;
+        }
+
+        public void MoveToken(Token token, GridCoordinate from, GridCoordinate to)
+        {
+            if (!IsValidCoordinate(to))
+                return;
+            
+            if (occupancy.TryGetValue(from, out Token occupant))
+            {
+                if (occupant == token)
+                {
+                    occupancy.Remove(from);
+                }
+            }
+            
+            occupancy[to] = token;
         }
 
         public void SetCell(GridCoordinate coord, TerrainType type)

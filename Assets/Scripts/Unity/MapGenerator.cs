@@ -32,11 +32,11 @@ namespace VTT.Unity
         {
             terrainDefinitions = new Dictionary<TerrainTag, TerrainDefinition>
             {
-                { TerrainTag.Grass, new TerrainDefinition(TerrainTag.Grass, TerrainType.Free, 0.6f, new Color(0.2f, 0.8f, 0.2f)) },
+                { TerrainTag.Grass, new TerrainDefinition(TerrainTag.Grass, TerrainType.Free, 0.50f, new Color(0.2f, 0.8f, 0.2f)) },
                 { TerrainTag.Road, new TerrainDefinition(TerrainTag.Road, TerrainType.Free, 0.0f,  new Color(0.6f, 0.5f, 0.3f)) },
-                { TerrainTag.Stone, new TerrainDefinition(TerrainTag.Stone, TerrainType.Difficult, 0.2f, new Color(0.5f, 0.5f, 0.5f)) },
+                { TerrainTag.Stone, new TerrainDefinition(TerrainTag.Stone, TerrainType.Difficult, 0.25f, new Color(0.5f, 0.5f, 0.5f)) },
                 { TerrainTag.Hole, new TerrainDefinition(TerrainTag.Hole, TerrainType.Difficult, 0.0f, new Color(0.3f, 0.2f, 0.1f)) },
-                { TerrainTag.Tree, new TerrainDefinition(TerrainTag.Tree, TerrainType.Blocked, 0.2f,  new Color(0f, 0.3f, 0f)) }
+                { TerrainTag.Tree, new TerrainDefinition(TerrainTag.Tree, TerrainType.Blocked, 0.25f,  new Color(0f, 0.3f, 0f)) }
             };
         }
         

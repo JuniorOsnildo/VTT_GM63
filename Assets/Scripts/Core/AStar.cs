@@ -16,17 +16,17 @@ namespace Core
             public Node Parent { get; set; } 
         }
 
-        private BoardGrid _boardGrid;
+        private BoardGrid boardGrid;
         private GridCoordinate start;
         private GridCoordinate goal;
         private HashSet<GridCoordinate> closedSet;  
         private List<Node> openSet;
         
-        public List<GridCoordinate> FindPath(GridCoordinate startCoord, GridCoordinate goalCoord, BoardGrid pathfindingBoardGrid)
+        public List<GridCoordinate> FindPath(GridCoordinate startCoord, GridCoordinate goalCoord, BoardGrid pathfindingBoardGrid, Token movingToken)
         {
             start = startCoord;
             goal = goalCoord;
-            _boardGrid = pathfindingBoardGrid;
+            boardGrid = pathfindingBoardGrid;
             closedSet = new HashSet<GridCoordinate>();
             openSet = new List<Node>();
             
@@ -51,13 +51,13 @@ namespace Core
                 openSet.Remove(currentNode);
                 closedSet.Add(currentNode.Coordinate);
                 
-                var neighbors = _boardGrid.GetNeighbors(currentNode.Coordinate);
+                var neighbors = boardGrid.GetNeighbors(currentNode.Coordinate);
                 foreach (var neighborCoord in neighbors)
                 {
                     if (closedSet.Contains(neighborCoord))
                         continue;
                     
-                    int movementCost = _boardGrid.GetMovementCost(currentNode.Coordinate, neighborCoord);
+                    int movementCost = boardGrid.GetMovementCost(currentNode.Coordinate, neighborCoord, movingToken);
 
                     int tentativeGCost = currentNode.GCost + movementCost;
 

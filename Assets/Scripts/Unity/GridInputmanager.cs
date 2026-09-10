@@ -110,6 +110,7 @@ namespace VTT.Unity
         
         private void CalculateAndShowPath(GridCoordinate targetCoord)
         {
+            Token movingToken = selectedToken.GetToken();
             
             if (selectedToken == null)
                 return;
@@ -118,7 +119,7 @@ namespace VTT.Unity
 
             BoardGrid boardGrid = gridManager.GetGrid();
 
-            List<GridCoordinate> path = pathfinder.FindPath(startCoord, targetCoord, boardGrid);
+            List<GridCoordinate> path = pathfinder.FindPath(startCoord, targetCoord, boardGrid, movingToken);
             
             if (path == null || path.Count == 0)
             {
@@ -145,7 +146,7 @@ namespace VTT.Unity
                 GridCoordinate from = path[i - 1];
                 GridCoordinate to = path[i];
 
-                int movementCost = boardGrid.GetMovementCost(from, to);
+                int movementCost = boardGrid.GetMovementCost(from, to, movingToken);
 
                 totalCost += movementCost;
 

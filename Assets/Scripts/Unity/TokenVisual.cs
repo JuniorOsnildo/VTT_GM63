@@ -44,9 +44,7 @@ namespace VTT.Unity
             return token.Coordinates;
         }
         
-        public IEnumerator MoveAlongPath(
-            List<GridCoordinate> path,
-            float moveSpeed = 4f)
+        public IEnumerator MoveAlongPath(List<GridCoordinate> path, float moveSpeed = 4f)
         {
             for (int i = 1; i < path.Count; i++)
             {
@@ -71,10 +69,16 @@ namespace VTT.Unity
 
                     yield return null;
                 }
-
+                
                 transform.position = targetPosition;
+                
+                GridCoordinate oldCoord = token.Coordinates;
+                
+                gridManager.GetGrid().MoveToken(token, oldCoord, nextCoord);
+                
                 token.Coordinates = nextCoord;
             }
+            
         }
     }
 }

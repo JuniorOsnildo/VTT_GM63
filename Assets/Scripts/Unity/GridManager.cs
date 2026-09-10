@@ -1,12 +1,15 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using Core;
+using Session;
 using VTT.Unity;
 
 namespace VTT.Unity
 {
     public class GridManager : MonoBehaviour
     {
+        [SerializeField] private SessionManager sessionManager;
+        
         [SerializeField] private int gridWidth = 10;
         [SerializeField] private int gridHeight = 10;
         [SerializeField] private float cellSize = 1f;
@@ -14,12 +17,16 @@ namespace VTT.Unity
         private TokenVisual playerToken;
         private BoardGrid boardGrid;
         private MapGenerator mapGenerator;
+        private GameObject gridVisuals;
         
         void Start()
         {
             // Gera o mapa procedural
             mapGenerator = new MapGenerator(gridWidth, gridHeight);
+            
             boardGrid = mapGenerator.GenerateMap();
+            
+            sessionManager.InitializeSession("Sala Inicial", boardGrid, mapGenerator);
             
             // Renderiza
             RenderGrid();
@@ -33,7 +40,7 @@ namespace VTT.Unity
 
             Renderer renderer = tokenObj.GetComponent<Renderer>();
 
-            renderer.material.color = Color.cornflowerBlue;
+            renderer.material.color = SetFactionColor(faction);
 
             tokenObj.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
 
@@ -45,18 +52,31 @@ namespace VTT.Unity
 
             Physics.SyncTransforms();
 
+            boardGrid.PlaceToken(token,coord);
+            
             return visual;
         }
 
-        public TokenVisual GetPlayerToken()
+        private Color SetFactionColor(Faction faction)
+        {
+            switch (faction)
+            {
+                case Faction.Ally: return Color.cornflowerBlue;
+                case Faction.Neutral: return Color.white;
+                case Faction.Enemie: return Color.red;
+                default: return Color.blueViolet;
+            }
+        }
+
+        public TokenVisual GetVisualToken()
         {
             return playerToken;
         }
         
         private void RenderGrid()
         {
-            GameObject gridVisualsParent = new GameObject("GridVisuals");
-            gridVisualsParent.transform.parent = transform;
+            gridVisuals = new GameObject("GridVisuals");
+            gridVisuals.transform.parent = transform;
     
             for (int x = 0; x < gridWidth; x++)
             {
@@ -66,7 +86,7 @@ namespace VTT.Unity
                     
                     GameObject cellVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
                     cellVisual.name = $"Cell_{x}_{y}";
-                    cellVisual.transform.parent = gridVisualsParent.transform;
+                    cellVisual.transform.parent = gridVisuals.transform;
                     
                     cellVisual.transform.position = new Vector3(x * cellSize, 0, y * cellSize);
                     cellVisual.transform.localScale = new Vector3(cellSize * 0.9f, 0.3f, cellSize * 0.9f);
@@ -77,8 +97,37 @@ namespace VTT.Unity
                     renderer.material.color = terrainColor;
                 }
             }
-            
             Physics.SyncTransforms();
+        }
+
+        public void LoadRoom(Room room)
+        {
+            if (room == null)
+            {
+                Debug.LogWarning(
+                    "[GRID] Tentativa de carregar uma sala nula."
+                );
+
+                return;
+            }
+            
+            if (gridVisuals != null)
+            {
+                Destroy(gridVisuals);
+                gridVisuals = null;
+            }
+            
+            boardGrid = room.Grid;
+            mapGenerator = room.MapGenerator;
+            
+            gridWidth = boardGrid.width;
+            gridHeight = boardGrid.height;
+            
+            RenderGrid();
+
+            Debug.Log(
+                $"[GRID] Sala carregada: {room.Name}"
+            );
         }
         
         public BoardGrid GetGrid() => boardGrid;
