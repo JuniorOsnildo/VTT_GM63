@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Core;
+using Session;
 using UnityEngine;
 
 namespace VTT.Unity
@@ -16,7 +17,6 @@ namespace VTT.Unity
         private int width;
         private int height;
         private TerrainTag[,] terrainMap;
-        public Dictionary<TerrainTag, TerrainDefinition> terrainDefinitions;
         private RoadPattern roadPattern;
 
         public MapGenerator(int w, int h)
@@ -25,24 +25,6 @@ namespace VTT.Unity
             height = h;
             roadPattern = (RoadPattern)Random.Range(0,3);
             terrainMap = new TerrainTag[w, h];
-            InitializeTerrainDefinitions();
-        }
-
-        private void InitializeTerrainDefinitions()
-        {
-            terrainDefinitions = new Dictionary<TerrainTag, TerrainDefinition>
-            {
-                { TerrainTag.Grass, new TerrainDefinition(TerrainTag.Grass, TerrainType.Free, 0.50f, new Color(0.2f, 0.8f, 0.2f)) },
-                { TerrainTag.Road, new TerrainDefinition(TerrainTag.Road, TerrainType.Free, 0.0f,  new Color(0.6f, 0.5f, 0.3f)) },
-                { TerrainTag.Stone, new TerrainDefinition(TerrainTag.Stone, TerrainType.Difficult, 0.25f, new Color(0.5f, 0.5f, 0.5f)) },
-                { TerrainTag.Hole, new TerrainDefinition(TerrainTag.Hole, TerrainType.Difficult, 0.0f, new Color(0.3f, 0.2f, 0.1f)) },
-                { TerrainTag.Tree, new TerrainDefinition(TerrainTag.Tree, TerrainType.Blocked, 0.25f,  new Color(0f, 0.3f, 0f)) }
-            };
-        }
-        
-        public Color GetTerrainColor(TerrainTag tag)
-        {
-            return terrainDefinitions.TryGetValue(tag, out var definition) ? definition.Color : Color.white;
         }
         
         public TerrainTag GetTerrainAt(GridCoordinate coord)
@@ -128,7 +110,7 @@ namespace VTT.Unity
                 {
                     var coord = new GridCoordinate(x, y);
                     TerrainTag tag = terrainMap[x, y];
-                    TerrainType type = terrainDefinitions[tag].GameType;
+                    TerrainType type = TerrainDefinitions.Get(tag).GameType;
                     
                     boardGrid.SetCell(coord, type);
                 }
@@ -139,14 +121,15 @@ namespace VTT.Unity
         
         private TerrainTag GetRandomTerrainWithConstraints(int x, int y)
         {
+            
             float rand = Random.Range(0.0f, 1f);
 
             float[] Weight =
             {
-                terrainDefinitions[TerrainTag.Grass].SpawnWeight,
-                terrainDefinitions[TerrainTag.Stone].SpawnWeight,
-                terrainDefinitions[TerrainTag.Hole].SpawnWeight,
-                terrainDefinitions[TerrainTag.Tree].SpawnWeight
+                TerrainDefinitions.Get(TerrainTag.Grass).SpawnWeight,
+                TerrainDefinitions.Get(TerrainTag.Stone).SpawnWeight,
+                TerrainDefinitions.Get(TerrainTag.Hole).SpawnWeight,
+                TerrainDefinitions.Get(TerrainTag.Tree).SpawnWeight
             };
 
             float pool = 0.0f;
@@ -161,6 +144,11 @@ namespace VTT.Unity
                 }
             }
             return TerrainTag.Grass;
+        }
+
+        public MapData GetMapData()
+        {
+            return new MapData(width, height, terrainMap);
         }
     }
 }

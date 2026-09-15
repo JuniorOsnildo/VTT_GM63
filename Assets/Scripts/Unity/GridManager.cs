@@ -2,13 +2,14 @@
 using UnityEngine;
 using Core;
 using Session;
+using UnityEngine.LightTransport.PostProcessing;
 using VTT.Unity;
 
 namespace VTT.Unity
 {
     public class GridManager : MonoBehaviour
     {
-        [SerializeField] private SessionManager sessionManager;
+        //[SerializeField] private SessionManager sessionManager;
         
         [SerializeField] private int gridWidth = 10;
         [SerializeField] private int gridHeight = 10;
@@ -16,35 +17,20 @@ namespace VTT.Unity
         
         private TokenVisual playerToken;
         private BoardGrid boardGrid;
-        private MapGenerator mapGenerator;
         private GameObject gridVisuals;
+        private MapData currentMapData;
         
-        void Start()
-        {
-            // Gera o mapa procedural
-            mapGenerator = new MapGenerator(gridWidth, gridHeight);
-            
-            boardGrid = mapGenerator.GenerateMap();
-            
-            sessionManager.InitializeSession("Sala Inicial", boardGrid, mapGenerator);
-            
-            // Renderiza
-            RenderGrid();
-        }
-        
-        public TokenVisual CreateToken(string tokenName, int maxMovement,Faction faction, GridCoordinate coord)
+        public TokenVisual CreateTokenVisual(Token token)
         {
             GameObject tokenObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
 
-            tokenObj.name = $"Token_{tokenName}";
+            tokenObj.name = $"Token_{token.Name}";
 
             Renderer renderer = tokenObj.GetComponent<Renderer>();
 
-            renderer.material.color = SetFactionColor(faction);
+            renderer.material.color = SetFactionColor(token.Faction);
 
             tokenObj.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
-
-            Token token = new Token(tokenName, coord, faction, maxMovement);
 
             TokenVisual visual = tokenObj.AddComponent<TokenVisual>();
 
@@ -52,8 +38,6 @@ namespace VTT.Unity
 
             Physics.SyncTransforms();
 
-            boardGrid.PlaceToken(token,coord);
-            
             return visual;
         }
 
@@ -92,12 +76,25 @@ namespace VTT.Unity
                     cellVisual.transform.localScale = new Vector3(cellSize * 0.9f, 0.3f, cellSize * 0.9f);
                     
                     Renderer renderer = cellVisual.GetComponent<Renderer>();
-                    TerrainTag terrainTag = mapGenerator.GetTerrainAt(coord);
-                    Color terrainColor = mapGenerator.GetTerrainColor(terrainTag);
+                    TerrainTag terrainTag = currentMapData.GetTerrainAt(coord);
+                    Color terrainColor = GetTerrainColor(terrainTag);
                     renderer.material.color = terrainColor;
                 }
             }
             Physics.SyncTransforms();
+        }
+        
+        private Color GetTerrainColor(TerrainTag tag)
+        {
+            return tag switch
+            {
+                TerrainTag.Grass => new Color(0.2f, 0.8f, 0.2f),
+                TerrainTag.Road => new Color(0.6f, 0.5f, 0.3f),
+                TerrainTag.Stone => new Color(0.5f, 0.5f, 0.5f),
+                TerrainTag.Hole => new Color(0.3f, 0.2f, 0.1f),
+                TerrainTag.Tree => new Color(0f, 0.3f, 0f),
+                _ => Color.white
+            };
         }
 
         public void LoadRoom(Room room)
@@ -118,7 +115,7 @@ namespace VTT.Unity
             }
             
             boardGrid = room.Grid;
-            mapGenerator = room.MapGenerator;
+            currentMapData = room.MapData;
             
             gridWidth = boardGrid.width;
             gridHeight = boardGrid.height;

@@ -5,12 +5,13 @@ namespace Session
     public class GameSession
     {
         public List<Room> Rooms { get; private set; }
-
+        public List<SessionPlayer> Players { get; private set; }
         public Room ActiveRoom { get; private set; }
 
         public GameSession()
         {
             Rooms = new List<Room>();
+            Players = new List<SessionPlayer>();
         }
 
         public void AddRoom(Room room)
@@ -19,9 +20,7 @@ namespace Session
                 return;
 
             Rooms.Add(room);
-
-            // Se for a primeira sala criada,
-            // ela vira automaticamente a sala ativa.
+            
             ActiveRoom ??= room;
         }
 
@@ -45,9 +44,7 @@ namespace Session
                 return;
 
             Rooms.Remove(room);
-
-            // Se apagamos a sala ativa,
-            // escolhe outra sala, caso exista.
+            
             if (ActiveRoom == room)
             {
                 ActiveRoom =
@@ -55,6 +52,33 @@ namespace Session
                         ? Rooms[0]
                         : null;
             }
+        }
+        
+        public void AddPlayer(SessionPlayer player)
+        {
+            if (player == null)
+                return;
+
+            if (Players.Contains(player))
+                return;
+
+            Players.Add(player);
+        }
+
+        public void RemovePlayer(SessionPlayer player)
+        {
+            if (player == null)
+                return;
+
+            Players.Remove(player);
+        }
+        
+        public SessionPlayer GetPlayerById(string playerId)
+        {
+            if (string.IsNullOrEmpty(playerId))
+                return null;
+
+            return Players.Find(player => player.Id == playerId);
         }
     }
 }

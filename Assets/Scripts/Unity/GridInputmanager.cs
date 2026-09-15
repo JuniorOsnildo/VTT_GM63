@@ -2,12 +2,15 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Core;
-using VTT.Unity;
+using Session;
 
 namespace VTT.Unity
 {
     public class GridInputManager : MonoBehaviour
     {
+        [SerializeField]
+        private SessionManager sessionManager;
+        
         private GridManager gridManager;
         private Camera mainCamera;
         private AStar pathfinder;
@@ -63,12 +66,26 @@ namespace VTT.Unity
                 GridCoordinate coord =
                     new GridCoordinate(x, y);
 
-                gridManager.CreateToken(
+                Room activeRoom =
+                    sessionManager.GetActiveRoom();
+
+                if (activeRoom == null)
+                {
+                    Debug.LogWarning(
+                        "[TOKEN] Não existe uma sala ativa."
+                    );
+
+                    return;
+                }
+
+                Token token = activeRoom.CreateToken(
                     tokenCreationUI.GetPendingName(),
-                    tokenCreationUI.GetPendingMovement(),
+                    coord,
                     tokenCreationUI.GetPendingFaction(),
-                    coord
+                    tokenCreationUI.GetPendingMovement()
                 );
+
+                gridManager.CreateTokenVisual(token);
 
                 tokenCreationUI.FinishPlacement();
 
