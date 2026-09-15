@@ -51,5 +51,15 @@ namespace Session
 
             return token;
         }
+        
+        public Token GetTokenById(string tokenId)
+        {
+            if (string.IsNullOrEmpty(tokenId))
+                return null;
+
+            return Tokens.Find(
+                token => token.Id == tokenId
+            );
+        }
     }
 }

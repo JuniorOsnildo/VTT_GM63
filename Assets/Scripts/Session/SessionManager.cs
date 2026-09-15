@@ -1,4 +1,7 @@
 ﻿using Core;
+using Network.DTO;
+using Network.Messages;
+using Network.Serialization;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using VTT.Unity;
@@ -13,7 +16,6 @@ namespace Session
         private GameSession gameSession;
 
         private int nextRoomId = 1;
-        private int nextPlayerId = 1;
 
         public GameSession GetGameSession()
         {
@@ -35,7 +37,6 @@ namespace Session
             gameSession = new GameSession();
 
             nextRoomId = 1;
-            nextPlayerId = 1;
 
             Room firstRoom =
                 CreateRoom(
@@ -119,6 +120,7 @@ namespace Session
         
         public void SwitchRoom(Room room)
         {
+            
             if (room == null)
                 return;
 
@@ -134,31 +136,47 @@ namespace Session
             );
         }
         
-        public SessionPlayer AddPlayer(string playerName)
+        public SessionPlayer AddPlayer(
+            string playerId,
+            string playerName)
         {
             if (gameSession == null)
             {
                 Debug.LogError("[SESSION] A sessão ainda não foi inicializada.");
+
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(playerId))
+            {
+                Debug.LogWarning("[SESSION] ID do jogador inválido.");
+
                 return null;
             }
 
             if (string.IsNullOrWhiteSpace(playerName))
             {
                 Debug.LogWarning("[SESSION] Nome do jogador inválido.");
+
                 return null;
             }
 
-            string playerId = $"player_{nextPlayerId}";
-            nextPlayerId++;
+            SessionPlayer existingPlayer = gameSession.GetPlayerById(playerId);
 
-            SessionPlayer player =
-                new SessionPlayer(playerId, playerName);
+            if (existingPlayer != null)
+            {
+                existingPlayer.Connect();
+
+                Debug.Log($"[SESSION] Jogador reconectado: " + $"{existingPlayer.Name} | ID: {existingPlayer.Id}");
+
+                return existingPlayer;
+            }
+
+            SessionPlayer player = new SessionPlayer(playerId, playerName);
 
             gameSession.AddPlayer(player);
 
-            Debug.Log(
-                $"[SESSION] Jogador adicionado: {player.Name} | ID: {player.Id}"
-            );
+            Debug.Log($"[SESSION] Jogador adicionado: " + $"{player.Name} | ID: {player.Id}");
 
             return player;
         }
@@ -221,6 +239,95 @@ namespace Session
             );
         }
         
+        public bool CanPlayerControlToken(
+            SessionPlayer player,
+            Token token)
+        {
+            if (gameSession == null)
+                return false;
+
+            if (player == null || token == null)
+                return false;
+
+            if (!gameSession.Players.Contains(player))
+                return false;
+
+            return player.ControlsToken(token.Id);
+        }
+        
+        public bool HandleMoveTokenRequest(MoveTokenRequestMessage message)
+        {
+            if (gameSession == null || message == null)
+                return false;
+
+            SessionPlayer player = gameSession.GetPlayerById(message.PlayerId);
+
+            Room room = gameSession.GetRoomById(message.RoomId);
+
+            if (player == null)
+            {
+                Debug.LogWarning(
+                    $"[MOVE] Player não encontrado: {message.PlayerId}"
+                );
+
+                return false;
+            }
+
+            if (room == null)
+            {
+                Debug.LogWarning(
+                    $"[MOVE] Sala não encontrada: {message.RoomId}"
+                );
+
+                return false;
+            }
+
+            Token token = room.GetTokenById(message.TokenId);
+
+            if (token == null)
+            {
+                Debug.LogWarning(
+                    $"[MOVE] Token não encontrado: {message.TokenId}"
+                );
+
+                return false;
+            }
+
+            if (!CanPlayerControlToken(player, token))
+            {
+                Debug.LogWarning(
+                    $"[MOVE] {player.Name} não controla {token.Name}."
+                );
+
+                return false;
+            }
+            
+            GridCoordinate target =
+                new GridCoordinate(
+                    message.TargetX,
+                    message.TargetY
+                );
+
+            if (!room.Grid.IsValidCoordinate(target))
+            {
+                Debug.LogWarning(
+                    $"[MOVE] Destino fora do mapa: " +
+                    $"({message.TargetX}, {message.TargetY})"
+                );
+
+                return false;
+            }
+
+            Debug.Log(
+                $"[MOVE] Pedido autorizado: " +
+                $"{player.Name} → {token.Name} → " +
+                $"({message.TargetX}, {message.TargetY})"
+            );
+
+            return true;
+        }
+        
+        // MÉTODOS DE TESTES DE FEATURES, SERÃO REMOVIDOS OU ATUREADOS COMPLETAMENTE DEPOIS
         private void Update()
         {
             if (Keyboard.current != null && Keyboard.current.nKey.wasPressedThisFrame)

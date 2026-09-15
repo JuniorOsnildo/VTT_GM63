@@ -3834,6 +3834,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c9f7ba4d4e474792ac4defd3e9d85a47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VTT.Unity.GridInputManager
+  sessionManager: {fileID: 691131728}
   tokenCreationUI: {fileID: 624231640}
 --- !u!114 &1838597369
 MonoBehaviour:
@@ -3847,7 +3848,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 720a6d73f141472f9e66f097004bd9af, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VTT.Unity.GridManager
-  sessionManager: {fileID: 691131728}
   gridWidth: 20
   gridHeight: 20
   cellSize: 1

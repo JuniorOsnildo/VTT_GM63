@@ -18,6 +18,7 @@ namespace VTT.Unity
         private TokenVisual playerToken;
         private BoardGrid boardGrid;
         private GameObject gridVisuals;
+        private GameObject tokenVisuals;
         private MapData currentMapData;
         
         public TokenVisual CreateTokenVisual(Token token)
@@ -31,11 +32,19 @@ namespace VTT.Unity
             renderer.material.color = SetFactionColor(token.Faction);
 
             tokenObj.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+            
+            if (tokenVisuals == null)
+            {
+                tokenVisuals = new GameObject("TokenVisuals");
+                tokenVisuals.transform.parent = transform;
+                tokenObj.transform.parent = tokenVisuals.transform;
+            }
 
             TokenVisual visual = tokenObj.AddComponent<TokenVisual>();
 
             visual.Initialize(token, this);
-
+            
+            
             Physics.SyncTransforms();
 
             return visual;
@@ -114,6 +123,12 @@ namespace VTT.Unity
                 gridVisuals = null;
             }
             
+            if (tokenVisuals != null)
+            {
+                Destroy(tokenVisuals);
+                tokenVisuals = null;
+            }
+            
             boardGrid = room.Grid;
             currentMapData = room.MapData;
             
@@ -122,6 +137,11 @@ namespace VTT.Unity
             
             RenderGrid();
 
+            foreach (Token token in room.Tokens)
+            {
+                CreateTokenVisual(token);
+            }
+            
             Debug.Log(
                 $"[GRID] Sala carregada: {room.Name}"
             );

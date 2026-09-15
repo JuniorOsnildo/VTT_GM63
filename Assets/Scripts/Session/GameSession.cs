@@ -54,6 +54,16 @@ namespace Session
             }
         }
         
+        public Room GetRoomById(string roomId)
+        {
+            if (string.IsNullOrEmpty(roomId))
+                return null;
+
+            return Rooms.Find(
+                room => room.Id == roomId
+            );
+        }
+        
         public void AddPlayer(SessionPlayer player)
         {
             if (player == null)
