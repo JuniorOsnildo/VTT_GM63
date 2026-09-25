@@ -13,7 +13,7 @@ namespace VTT.Unity
         
         private GridManager gridManager;
         private Camera mainCamera;
-        private AStar pathfinder;
+        private TokenMovementService pathfinder;
         private PathRenderer pathRenderer;
         
         private TokenVisual selectedToken;
@@ -25,7 +25,7 @@ namespace VTT.Unity
         {
             gridManager = GetComponent<GridManager>();
             mainCamera = Camera.main;
-            pathfinder = new AStar();
+            pathfinder = new TokenMovementService();
             pathRenderer = new PathRenderer(gridManager);
         }
         
@@ -66,24 +66,15 @@ namespace VTT.Unity
                 GridCoordinate coord =
                     new GridCoordinate(x, y);
 
-                Room activeRoom =
-                    sessionManager.GetActiveRoom();
-
-                if (activeRoom == null)
-                {
-                    Debug.LogWarning(
-                        "[TOKEN] Não existe uma sala ativa."
-                    );
-
-                    return;
-                }
-
-                Token token = activeRoom.CreateToken(
+                Token token = sessionManager.CreateToken(
                     tokenCreationUI.GetPendingName(),
                     coord,
                     tokenCreationUI.GetPendingFaction(),
                     tokenCreationUI.GetPendingMovement()
                 );
+
+                if (token == null)
+                    return;
 
                 gridManager.CreateTokenVisual(token);
 
@@ -98,10 +89,6 @@ namespace VTT.Unity
             if (clickedToken != null)
             {
                 selectedToken = clickedToken;
-
-                Debug.Log(
-                    $"[TOKEN] Selecionado em {selectedToken.GetCurrentCoordinate()}"
-                );
 
                 return;
             }
@@ -124,32 +111,38 @@ namespace VTT.Unity
                 selectedToken = null;
             }
         }
-        
         private void CalculateAndShowPath(GridCoordinate targetCoord)
         {
-            Token movingToken = selectedToken.GetToken();
-            
             if (selectedToken == null)
                 return;
+
+            Token movingToken = selectedToken.GetToken();
 
             GridCoordinate startCoord = selectedToken.GetCurrentCoordinate();
 
             BoardGrid boardGrid = gridManager.GetGrid();
 
-            List<GridCoordinate> path = pathfinder.FindPath(startCoord, targetCoord, boardGrid, movingToken);
-            
-            if (path == null || path.Count == 0)
+            TokenMovementService.TokenMovementResult result = pathfinder.EvaluateMove(movingToken, targetCoord, boardGrid);
+
+            if (!result.HasPath)
             {
                 pathRenderer.ClearPath();
 
-                Debug.Log($"[CAMINHO] Não existe caminho de {startCoord} até {targetCoord}.");
+                Debug.Log(
+                    $"[CAMINHO] Não existe caminho de " +
+                    $"{startCoord} até {targetCoord}."
+                );
 
                 return;
             }
 
-            int maxMovement = selectedToken.GetToken().MaxMovement;
+            List<GridCoordinate> path = result.Path;
 
-            int totalCost = 0;
+            int totalCost = result.TotalCost;
+
+            int maxMovement = movingToken.MaxMovement;
+
+            int currentCost = 0;
 
             List<GridCoordinate> validPath = new List<GridCoordinate>();
 
@@ -165,41 +158,42 @@ namespace VTT.Unity
 
                 int movementCost = boardGrid.GetMovementCost(from, to, movingToken);
 
-                totalCost += movementCost;
+                currentCost += movementCost;
 
-                if (totalCost <= maxMovement)
+                if (currentCost <= maxMovement)
                 {
-                    // Ainda está dentro do alcance
                     validPath.Add(to);
                 }
                 else
                 {
-                    // Passou do limite
                     invalidPath.Add(to);
                 }
             }
-
-            Debug.Log($"[CAMINHO] Custo: {totalCost}/{maxMovement}");
 
             pathRenderer.ClearPath();
 
             // Parte permitida
             if (validPath.Count > 0)
             {
-                pathRenderer.DrawPath(validPath, Color.yellow);
+                pathRenderer.DrawPath(
+                    validPath,
+                    Color.yellow
+                );
             }
 
             // Parte fora do alcance
             if (invalidPath.Count > 0)
             {
-                pathRenderer.DrawPath(invalidPath, Color.red);
-
-                Debug.LogWarning($"[MOVIMENTO] O destino está fora do alcance! " + $"Custo: {totalCost} | Máximo: {maxMovement}");
+                pathRenderer.DrawPath(
+                    invalidPath,
+                    Color.red
+                );
 
                 return;
             }
+            
+            pathfinder.ExecuteMove(movingToken, boardGrid, result);
 
-            // O caminho inteiro está dentro do alcance
             StartCoroutine(selectedToken.MoveAlongPath(path));
         }
     }

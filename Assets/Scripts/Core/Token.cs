@@ -10,8 +10,6 @@
         
         public int MaxMovement {get; private set;}
         
-        public int RemainingMovement {get; private set;}
-        
         public Faction Faction { get; set; }
 
         public Token(string id, string name, GridCoordinate coordinates, Faction faction, int movement)
@@ -21,18 +19,11 @@
             this.Coordinates = coordinates;
             Faction = faction;
             MaxMovement = movement;
-            RemainingMovement = movement;
         }
 
         public void MoveTo(GridCoordinate coordinate, int movementCost)
         {
             Coordinates = coordinate;
-            RemainingMovement = movementCost;
-        }
-
-        public void ResetMovement()
-        {
-            RemainingMovement = MaxMovement;
         }
         
     }

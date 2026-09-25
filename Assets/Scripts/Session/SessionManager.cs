@@ -1,5 +1,5 @@
-﻿using Core;
-using Network.DTO;
+﻿using System;
+using Core;
 using Network.Messages;
 using Network.Serialization;
 using UnityEngine;
@@ -14,6 +14,12 @@ namespace Session
         private GridManager gridManager;
         
         private GameSession gameSession;
+        
+        private TokenMovementService movementService;
+        
+        public event Action<TokenMovedMessage> OnTokenMoved;
+        public event Action<Token> OnTokenCreated;
+        public event Action<Room> OnActiveRoomChanged;
 
         private int nextRoomId = 1;
 
@@ -37,19 +43,12 @@ namespace Session
             gameSession = new GameSession();
 
             nextRoomId = 1;
+            
+            movementService = new TokenMovementService();
 
-            Room firstRoom =
-                CreateRoom(
-                    "Sala Inicial",
-                    10,
-                    10
-                );
+            Room firstRoom = CreateRoom("Sala Inicial", 10, 10);
             
             SwitchRoom(firstRoom);
-
-            Debug.Log(
-                $"[SESSION] Sessão criada. Sala ativa: {firstRoom.Name}"
-            );
         }
 
         public Room CreateRoom(string roomName, int width, int height)
@@ -73,8 +72,6 @@ namespace Session
             Room newRoom = new Room(roomId, roomName, newBoard, mapData);
             
             gameSession.AddRoom(newRoom);
-            
-            Debug.Log($"[SESSION] Sala criada: {roomName} | ID: {roomId}");
             
             return newRoom;
         }
@@ -105,16 +102,11 @@ namespace Session
             bool wasActiveRoom = gameSession.ActiveRoom == room;
 
             gameSession.RemoveRoom(room);
-
-            Debug.Log($"[SESSION] Sala removida: {room.Name}");
             
             if (wasActiveRoom)
             {
                 gridManager.LoadRoom(gameSession.ActiveRoom);
-
-                Debug.Log(
-                    $"[SESSION] Nova sala ativa: {gameSession.ActiveRoom.Name}"
-                );
+                
             }
         }
         
@@ -130,10 +122,8 @@ namespace Session
             gameSession.SetActiveRoom(room);
 
             gridManager.LoadRoom(room);
-
-            Debug.Log(
-                $"[SESSION] Sala ativa alterada para: {room.Name}"
-            );
+            
+            OnActiveRoomChanged?.Invoke(room);
         }
         
         public SessionPlayer AddPlayer(
@@ -317,7 +307,56 @@ namespace Session
 
                 return false;
             }
+            
+            TokenMovementService.TokenMovementResult result = movementService.EvaluateMove(token, target, room.Grid);
 
+            if (!result.HasPath)
+            {
+                Debug.LogWarning(
+                    $"[MOVE] Não existe caminho para " +
+                    $"{token.Name} até ({message.TargetX}, {message.TargetY})."
+                );
+
+                return false;
+            }
+
+            if (!result.CanMove)
+            {
+                Debug.LogWarning(
+                    $"[MOVE] Destino fora do alcance de {token.Name}. " +
+                    $"Custo: {result.TotalCost} | " +
+                    $"Máximo: {token.MaxMovement}"
+                );
+
+                return false;
+            }
+            
+            movementService.ExecuteMove(token, room.Grid, result);
+            
+            TokenMovedMessage movedMessage =
+                new TokenMovedMessage(
+                    room.Id,
+                    token.Id,
+                    token.Coordinates.X,
+                    token.Coordinates.Y,
+                    result.Path
+                );
+
+            OnTokenMoved?.Invoke(movedMessage);
+            
+            if (room == gameSession.ActiveRoom)
+            {
+                TokenVisual visual =
+                    gridManager.GetTokenVisual(token.Id);
+
+                if (visual != null)
+                {
+                    StartCoroutine(
+                        visual.MoveAlongPath(result.Path)
+                    );
+                }
+            }
+            
             Debug.Log(
                 $"[MOVE] Pedido autorizado: " +
                 $"{player.Name} → {token.Name} → " +
@@ -325,6 +364,38 @@ namespace Session
             );
 
             return true;
+        }
+        
+        public Token CreateToken(
+            string name,
+            GridCoordinate coordinate,
+            Faction faction,
+            int maxMovement)
+        {
+            Room activeRoom = GetActiveRoom();
+
+            if (activeRoom == null)
+            {
+                Debug.LogWarning(
+                    "[TOKEN] Não existe uma sala ativa."
+                );
+
+                return null;
+            }
+
+            Token token = activeRoom.CreateToken(
+                name,
+                coordinate,
+                faction,
+                maxMovement
+            );
+
+            if (token == null)
+                return null;
+
+            OnTokenCreated?.Invoke(token);
+
+            return token;
         }
         
         // MÉTODOS DE TESTES DE FEATURES, SERÃO REMOVIDOS OU ATUREADOS COMPLETAMENTE DEPOIS
@@ -346,6 +417,8 @@ namespace Session
             {
                 DeleteRoom(gameSession.ActiveRoom);
             }
+            
         }
+        
     }
 }

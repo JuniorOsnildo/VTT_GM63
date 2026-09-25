@@ -44,41 +44,30 @@ namespace VTT.Unity
             return token.Coordinates;
         }
         
-        public IEnumerator MoveAlongPath(List<GridCoordinate> path, float moveSpeed = 4f)
+        public IEnumerator MoveAlongPath(
+            List<GridCoordinate> path,
+            float moveSpeed = 4f)
         {
+            if (path == null || path.Count == 0)
+                yield break;
+
             for (int i = 1; i < path.Count; i++)
             {
                 GridCoordinate nextCoord = path[i];
 
-                Vector3 worldPos =
-                    gridManager.GridCoordToWorldPosition(nextCoord);
+                Vector3 worldPos = gridManager.GridCoordToWorldPosition(nextCoord);
 
-                Vector3 targetPosition =
-                    new Vector3(worldPos.x, 0.3f, worldPos.z);
+                Vector3 targetPosition = new Vector3(worldPos.x, 0.3f, worldPos.z);
 
-                while (Vector3.Distance(
-                           transform.position,
-                           targetPosition) > 0.01f)
+                while (Vector3.Distance(transform.position, targetPosition) > 0.01f)
                 {
-                    transform.position =
-                        Vector3.MoveTowards(
-                            transform.position,
-                            targetPosition,
-                            moveSpeed * Time.deltaTime
-                        );
+                    transform.position = Vector3.MoveTowards(transform.position, targetPosition, moveSpeed * Time.deltaTime);
 
                     yield return null;
                 }
-                
+
                 transform.position = targetPosition;
-                
-                GridCoordinate oldCoord = token.Coordinates;
-                
-                gridManager.GetGrid().MoveToken(token, oldCoord, nextCoord);
-                
-                token.Coordinates = nextCoord;
             }
-            
         }
     }
 }

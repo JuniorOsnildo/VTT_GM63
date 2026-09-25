@@ -111,9 +111,12 @@ namespace Core
 
         public void MoveToken(Token token, GridCoordinate from, GridCoordinate to)
         {
+            if (token == null)
+                return;
+
             if (!IsValidCoordinate(to))
                 return;
-            
+
             if (occupancy.TryGetValue(from, out Token occupant))
             {
                 if (occupant == token)
@@ -121,8 +124,10 @@ namespace Core
                     occupancy.Remove(from);
                 }
             }
-            
+
             occupancy[to] = token;
+
+            token.Coordinates = to;
         }
 
         public void SetCell(GridCoordinate coord, TerrainType type)

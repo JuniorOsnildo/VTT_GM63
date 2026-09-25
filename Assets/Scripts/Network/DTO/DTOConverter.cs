@@ -21,9 +21,25 @@ namespace Network.DTO
 
                 Faction = (int)token.Faction,
 
-                MaxMovement = token.MaxMovement,
-                RemainingMovement = token.RemainingMovement
+                MaxMovement = token.MaxMovement
             };
+        }
+        
+        public static Token ToToken(TokenDTO tokenDTO)
+        {
+            if (tokenDTO == null)
+                return null;
+
+            return new Token(
+                tokenDTO.Id,
+                tokenDTO.Name,
+                new GridCoordinate(
+                    tokenDTO.X,
+                    tokenDTO.Y
+                ),
+                (Faction)tokenDTO.Faction,
+                tokenDTO.MaxMovement
+            );
         }
         
         public static MapDTO ToDTO(MapData mapData)
@@ -56,6 +72,36 @@ namespace Network.DTO
                 Height = height,
                 Terrain = terrain
             };
+        }
+        
+        public static MapData ToMapData(MapDTO mapDTO)
+        {
+            if (mapDTO == null)
+                return null;
+
+            TerrainTag[,] terrain =
+                new TerrainTag[
+                    mapDTO.Width,
+                    mapDTO.Height
+                ];
+
+            for (int y = 0; y < mapDTO.Height; y++)
+            {
+                for (int x = 0; x < mapDTO.Width; x++)
+                {
+                    int index =
+                        y * mapDTO.Width + x;
+
+                    terrain[x, y] =
+                        (TerrainTag)mapDTO.Terrain[index];
+                }
+            }
+
+            return new MapData(
+                mapDTO.Width,
+                mapDTO.Height,
+                terrain
+            );
         }
         
         public static RoomDTO ToDTO(Room room)

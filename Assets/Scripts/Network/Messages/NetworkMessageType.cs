@@ -9,6 +9,7 @@
 
         MoveTokenRequest,
         TokenMoved,
+        TokenCreated,
 
         ActiveRoomChanged
     }

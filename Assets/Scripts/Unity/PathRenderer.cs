@@ -36,6 +36,10 @@ namespace VTT.Unity
                 Renderer renderer =
                     pathMarker.GetComponent<Renderer>();
 
+                renderer.material = new Material(
+                    gridManager.GetGridMaterial()
+                );
+
                 renderer.material.color = pathColor;
 
                 Vector3 worldPos =

@@ -1,7 +1,9 @@
 ﻿namespace Network.Transport
 {
-    public class NetworkTransportMode
+    public enum NetworkTransportMode
     {
-        
+        None,
+        Host,
+        Client
     }
 }

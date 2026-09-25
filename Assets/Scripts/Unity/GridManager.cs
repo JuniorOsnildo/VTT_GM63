@@ -2,8 +2,6 @@
 using UnityEngine;
 using Core;
 using Session;
-using UnityEngine.LightTransport.PostProcessing;
-using VTT.Unity;
 
 namespace VTT.Unity
 {
@@ -15,10 +13,16 @@ namespace VTT.Unity
         [SerializeField] private int gridHeight = 10;
         [SerializeField] private float cellSize = 1f;
         
+        [SerializeField] private Material gridMaterial;
+        [SerializeField] private Material tokenMaterial;
+        
         private TokenVisual playerToken;
         private BoardGrid boardGrid;
+        
         private GameObject gridVisuals;
         private GameObject tokenVisuals;
+        private Dictionary<string, TokenVisual> tokenVisualById = new Dictionary<string, TokenVisual>();
+        
         private MapData currentMapData;
         
         public TokenVisual CreateTokenVisual(Token token)
@@ -29,6 +33,7 @@ namespace VTT.Unity
 
             Renderer renderer = tokenObj.GetComponent<Renderer>();
 
+            renderer.material = new Material(tokenMaterial);
             renderer.material.color = SetFactionColor(token.Faction);
 
             tokenObj.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
@@ -37,17 +42,31 @@ namespace VTT.Unity
             {
                 tokenVisuals = new GameObject("TokenVisuals");
                 tokenVisuals.transform.parent = transform;
-                tokenObj.transform.parent = tokenVisuals.transform;
             }
+
+            tokenObj.transform.parent = tokenVisuals.transform;
 
             TokenVisual visual = tokenObj.AddComponent<TokenVisual>();
 
             visual.Initialize(token, this);
-            
+            tokenVisualById[token.Id] = visual;
             
             Physics.SyncTransforms();
 
             return visual;
+        }
+        
+        public TokenVisual GetTokenVisual(string tokenId)
+        {
+            if (string.IsNullOrEmpty(tokenId))
+                return null;
+
+            if (tokenVisualById.TryGetValue(tokenId, out TokenVisual visual))
+            {
+                return visual;
+            }
+
+            return null;
         }
 
         private Color SetFactionColor(Faction faction)
@@ -85,8 +104,12 @@ namespace VTT.Unity
                     cellVisual.transform.localScale = new Vector3(cellSize * 0.9f, 0.3f, cellSize * 0.9f);
                     
                     Renderer renderer = cellVisual.GetComponent<Renderer>();
+
+                    renderer.material = new Material(gridMaterial);
+
                     TerrainTag terrainTag = currentMapData.GetTerrainAt(coord);
                     Color terrainColor = GetTerrainColor(terrainTag);
+
                     renderer.material.color = terrainColor;
                 }
             }
@@ -104,6 +127,39 @@ namespace VTT.Unity
                 TerrainTag.Tree => new Color(0f, 0.3f, 0f),
                 _ => Color.white
             };
+        }
+        
+        public void LoadMap(MapData mapData)
+        {
+            if (mapData == null)
+            {
+                Debug.LogWarning(
+                    "[GRID] Tentativa de carregar um mapa nulo."
+                );
+
+                return;
+            }
+
+            if (gridVisuals != null)
+            {
+                Destroy(gridVisuals);
+                gridVisuals = null;
+            }
+
+            if (tokenVisuals != null)
+            {
+                Destroy(tokenVisuals);
+                tokenVisuals = null;
+            }
+
+            tokenVisualById.Clear();
+
+            currentMapData = mapData;
+
+            gridWidth = mapData.Width;
+            gridHeight = mapData.Height;
+
+            RenderGrid();
         }
 
         public void LoadRoom(Room room)
@@ -129,6 +185,8 @@ namespace VTT.Unity
                 tokenVisuals = null;
             }
             
+            tokenVisualById.Clear();
+            
             boardGrid = room.Grid;
             currentMapData = room.MapData;
             
@@ -142,13 +200,17 @@ namespace VTT.Unity
                 CreateTokenVisual(token);
             }
             
-            Debug.Log(
-                $"[GRID] Sala carregada: {room.Name}"
-            );
         }
         
         public BoardGrid GetGrid() => boardGrid;
-        public Vector3 GridCoordToWorldPosition(GridCoordinate coord) 
+        
+        public Material GetGridMaterial()
+        {
+            return gridMaterial;
+        }
+        
+        public Vector3 GridCoordToWorldPosition(GridCoordinate coord)
             => new Vector3(coord.X * cellSize, 0, coord.Y * cellSize);
+        
     }
 }
