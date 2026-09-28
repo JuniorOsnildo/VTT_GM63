@@ -11,12 +11,17 @@ namespace VTT.Unity
         [SerializeField]
         private SessionManager sessionManager;
         
+        [SerializeField]
+        private TokenOptionsUI tokenOptionsUI;
+        
         private GridManager gridManager;
         private Camera mainCamera;
         private TokenMovementService pathfinder;
         private PathRenderer pathRenderer;
         
         private TokenVisual selectedToken;
+        
+        private GridCoordinate? pendingMoveTarget;
         
         [SerializeField]
         private TokenCreationUI tokenCreationUI;
@@ -32,10 +37,47 @@ namespace VTT.Unity
         void Update()
         {
             var mouse = Mouse.current;
-            if (mouse != null && mouse.leftButton.wasPressedThisFrame)
+
+            if (mouse == null)
+                return;
+
+            if (mouse.leftButton.wasPressedThisFrame)
             {
                 HandleGridClick();
             }
+
+            if (mouse.rightButton.wasPressedThisFrame)
+            {
+                HandleTokenRightClick();
+            }
+        }
+        
+        private void HandleTokenRightClick()
+        {
+            var mouse = Mouse.current;
+
+            if (mouse == null || mainCamera == null)
+                return;
+
+            Ray ray = mainCamera.ScreenPointToRay(
+                mouse.position.ReadValue()
+            );
+
+            if (!Physics.Raycast(ray, out RaycastHit hit))
+                return;
+
+            TokenVisual clickedToken =
+                hit.collider.GetComponent<TokenVisual>();
+
+            if (clickedToken == null)
+                return;
+
+            Token token = clickedToken.GetToken();
+
+            if (token == null)
+                return;
+
+            tokenOptionsUI.Open(token);
         }
         
         private void HandleGridClick()
@@ -102,15 +144,48 @@ namespace VTT.Unity
 
                 int x = Mathf.RoundToInt(hitPoint.x);
                 int y = Mathf.RoundToInt(hitPoint.z);
-
+                
                 GridCoordinate targetCoord =
                     new GridCoordinate(x, y);
+                
+                if (pendingMoveTarget.HasValue &&
+                    pendingMoveTarget.Value.Equals(targetCoord))
+                {
+                    ConfirmPendingMove();
+                    return;
+                }
+                
+                pendingMoveTarget = targetCoord;
 
                 CalculateAndShowPath(targetCoord);
-
-                selectedToken = null;
+                
+                
             }
         }
+        
+        private void ConfirmPendingMove()
+        {
+            if (selectedToken == null ||
+                !pendingMoveTarget.HasValue)
+                return;
+
+            Token movingToken =
+                selectedToken.GetToken();
+
+            GridCoordinate target =
+                pendingMoveTarget.Value;
+
+            sessionManager.MoveToken(
+                movingToken,
+                target
+            );
+
+            pathRenderer.ClearPath();
+
+            pendingMoveTarget = null;
+            selectedToken = null;
+        }
+        
         private void CalculateAndShowPath(GridCoordinate targetCoord)
         {
             if (selectedToken == null)
@@ -191,10 +266,6 @@ namespace VTT.Unity
 
                 return;
             }
-            
-            pathfinder.ExecuteMove(movingToken, boardGrid, result);
-
-            StartCoroutine(selectedToken.MoveAlongPath(path));
         }
     }
 }

@@ -245,6 +245,64 @@ namespace Session
             return player.ControlsToken(token.Id);
         }
         
+        public bool MoveToken(
+            Token token,
+            GridCoordinate target)
+        {
+            if (gameSession == null || token == null)
+                return false;
+
+            Room room = gameSession.ActiveRoom;
+
+            if (room == null)
+                return false;
+
+            if (!room.Grid.IsValidCoordinate(target))
+                return false;
+
+            TokenMovementService.TokenMovementResult result =
+                movementService.EvaluateMove(
+                    token,
+                    target,
+                    room.Grid
+                );
+
+            if (!result.HasPath)
+                return false;
+
+            if (!result.CanMove)
+                return false;
+
+            movementService.ExecuteMove(
+                token,
+                room.Grid,
+                result
+            );
+
+            TokenMovedMessage movedMessage =
+                new TokenMovedMessage(
+                    room.Id,
+                    token.Id,
+                    token.Coordinates.X,
+                    token.Coordinates.Y,
+                    result.Path
+                );
+
+            OnTokenMoved?.Invoke(movedMessage);
+
+            TokenVisual visual =
+                gridManager.GetTokenVisual(token.Id);
+
+            if (visual != null)
+            {
+                StartCoroutine(
+                    visual.MoveAlongPath(result.Path)
+                );
+            }
+
+            return true;
+        }
+        
         public bool HandleMoveTokenRequest(MoveTokenRequestMessage message)
         {
             if (gameSession == null || message == null)
@@ -416,6 +474,25 @@ namespace Session
                 Keyboard.current.deleteKey.wasPressedThisFrame)
             {
                 DeleteRoom(gameSession.ActiveRoom);
+            }
+            
+            if (Keyboard.current != null &&
+                Keyboard.current.pKey.wasPressedThisFrame)
+            {
+                AddPlayer(
+                    "player_teste_1",
+                    "Player Teste 1"
+                );
+
+                AddPlayer(
+                    "player_teste_2",
+                    "Player Teste 2"
+                );
+
+                AddPlayer(
+                    "player_teste_3",
+                    "Player Teste 3"
+                );
             }
             
         }

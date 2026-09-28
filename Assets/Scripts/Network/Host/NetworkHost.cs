@@ -148,15 +148,38 @@ namespace Network.Host
 
                 return;
             }
-            
+
             playersByConnection[connection.Id] = player;
 
             Debug.Log(
                 $"[NETWORK HOST] Conexão {connection.Id} " +
                 $"associada ao jogador {player.Name}."
             );
-            
-            SessionSnapshotDTO snapshot = DTOConverter.ToDTO(sessionManager.GetGameSession());
+
+            // Primeiro confirma que o jogador entrou na sessão.
+            JoinAcceptedMessage acceptedMessage =
+                new JoinAcceptedMessage(player.Id);
+
+            string responseJson =
+                NetworkSerializer.SerializeMessage(
+                    acceptedMessage
+                );
+
+            transport.Send(
+                connection,
+                responseJson
+            );
+
+            Debug.Log(
+                $"[NETWORK HOST] JoinAccepted enviado para: " +
+                $"{player.Name}"
+            );
+
+            // Depois envia o estado atual da sessão.
+            SessionSnapshotDTO snapshot =
+                DTOConverter.ToDTO(
+                    sessionManager.GetGameSession()
+                );
 
             SessionSnapshotMessage snapshotMessage =
                 new SessionSnapshotMessage(snapshot);
@@ -175,30 +198,6 @@ namespace Network.Host
                 $"[NETWORK HOST] SessionSnapshot enviado para: " +
                 $"{player.Name}"
             );
-
-            Debug.Log(
-                $"[NETWORK HOST] Jogador aceito na sessão: " +
-                $"{player.Name}"
-            );
-            
-            JoinAcceptedMessage acceptedMessage =
-                new JoinAcceptedMessage(player.Id);
-
-            string responseJson =
-                NetworkSerializer.SerializeMessage(
-                    acceptedMessage
-                );
-
-            transport.Send(
-                connection,
-                responseJson
-            );
-
-            Debug.Log(
-                $"[NETWORK HOST] JoinAccepted enviado para: " +
-                $"{player.Name}"
-            );
-            
         }
         
         private void HandleClientDisconnected(
