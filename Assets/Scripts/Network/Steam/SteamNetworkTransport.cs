@@ -565,10 +565,5 @@ namespace Network.Steam
                 $"[STEAM NETWORK] Transporte {previousMode} encerrado."
             );
         }
-        
-        private void OnDestroy()
-        {
-            Stop();
-        }
     }
 }

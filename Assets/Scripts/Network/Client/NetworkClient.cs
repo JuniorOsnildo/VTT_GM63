@@ -6,6 +6,7 @@ using Network.Transport;
 using Network.Messages;
 using Network.Serialization;
 using Session;
+using Steamworks;
 using VTT.Unity;
 
 namespace Network.Client
@@ -14,16 +15,12 @@ namespace Network.Client
     {
         [SerializeField]
         private Network.Steam.SteamNetworkTransport transport;
-
-        [SerializeField]
-        private string playerId = "player_test";
-
-        [SerializeField]
-        private string playerName = "Player Test";
         
         [SerializeField] private GridManager gridManager;
 
         private PlayerSessionState sessionState;
+        
+        private NetworkConnection serverConnection;
         
         private void Start()
         {
@@ -50,10 +47,13 @@ namespace Network.Client
             transport.OnClientConnected += HandleConnected;
             transport.OnMessageReceived += HandleMessageReceived;
         }
-
-        private void HandleConnected(
-            NetworkConnection connection)
+        
+        private void HandleConnected(NetworkConnection connection)
         {
+            serverConnection = connection;
+            string playerId = SteamUser.GetSteamID().ToString();
+            string playerName = SteamFriends.GetPersonaName();
+            
             JoinRequestMessage joinRequest =
                 new JoinRequestMessage(
                     playerId,
@@ -63,19 +63,13 @@ namespace Network.Client
             string json =
                 NetworkSerializer.SerializeMessage(joinRequest);
 
-            Debug.Log(
-                $"[NETWORK CLIENT] Enviando JoinRequest: {json}"
-            );
-
             transport.Send(
                 connection,
                 json
             );
         }
         
-        private void HandleMessageReceived(
-            NetworkConnection connection,
-            string json)
+        private void HandleMessageReceived(NetworkConnection connection, string json)
         {
             NetworkMessageType messageType =
                 NetworkSerializer.GetMessageType(json);
@@ -100,6 +94,23 @@ namespace Network.Client
             {
                 HandleTokenMoved(json);
             }
+            else if (messageType == NetworkMessageType.PlayerControlUpdated)
+            {
+                HandlePlayerControlUpdated(json);
+            }
+        }
+        
+        private void HandlePlayerControlUpdated(string json)
+        {
+            PlayerControlUpdatedMessage message = NetworkSerializer.DeserializeMessage<PlayerControlUpdatedMessage>(json);
+
+            if (message == null)
+            {
+                Debug.LogWarning("[NETWORK CLIENT] PlayerControlUpdated inválido.");
+                return;
+            }
+
+            sessionState.ApplyPlayerControlUpdated(message.PlayerId, message.ControlledTokenIds);
         }
 
         private void HandleJoinAccepted(string json)
@@ -117,11 +128,7 @@ namespace Network.Client
 
                 return;
             }
-
-            Debug.Log(
-                $"[NETWORK CLIENT] Entrada na sessão aceita. " +
-                $"PlayerId: {message.PlayerId}"
-            );
+            
         }
         
         private void HandleSessionSnapshot(string json)
@@ -168,13 +175,6 @@ namespace Network.Client
                     gridManager.CreateTokenVisual(token);
                 }
             }
-            
-            Debug.Log(
-                $"[NETWORK CLIENT] SessionSnapshot recebido. " +
-                $"Sala ativa: {message.Snapshot.ActiveRoomId} | " +
-                $"Jogadores: {message.Snapshot.Players?.Length ?? 0} | " +
-                $"Tokens: {message.Snapshot.ActiveRoom?.Tokens?.Length ?? 0}"
-            );
         }
 
         private void HandleTokenCreated(string json)
@@ -223,6 +223,9 @@ namespace Network.Client
 
                 return;
             }
+
+            // Atualiza a sala ativa no estado local do Player
+            sessionState.ApplyActiveRoom(message.Room);
 
             if (message.Room.Map == null)
                 return;
@@ -301,13 +304,43 @@ namespace Network.Client
 
             if (token != null)
             {
-                token.Coordinates =
-                    new GridCoordinate(
-                        message.X,
-                        message.Y
-                    );
+                BoardGrid boardGrid = gridManager.GetGrid();
+
+                if (boardGrid != null)
+                {
+                    GridCoordinate from = token.Coordinates;
+                    GridCoordinate to = new GridCoordinate(message.X, message.Y);
+
+                    boardGrid.MoveToken(token, from, to);
+                }
+                else
+                {
+                    token.Coordinates = new GridCoordinate(message.X, message.Y);
+                }
             }
         } 
+        
+        public PlayerSessionState GetSessionState()
+        {
+            return sessionState;
+        }
+        
+        public string GetLocalPlayerId()
+        {
+            return SteamUser.GetSteamID().ToString();
+        }
+        
+        public void SendMoveTokenRequest(string roomId, string tokenId, int targetX, int targetY)
+        {
+            if (transport == null || serverConnection == null)
+                return;
+
+            MoveTokenRequestMessage message = new MoveTokenRequestMessage(roomId, tokenId, targetX, targetY);
+
+            string json = NetworkSerializer.SerializeMessage(message);
+
+            transport.Send(serverConnection, json);
+        }
         
         private void OnDestroy()
         {

@@ -17,9 +17,12 @@ namespace Session
         
         private TokenMovementService movementService;
         
+        public event Action<Room> OnRoomCreated;
+        public event Action<Room> OnRoomDeleted;
         public event Action<TokenMovedMessage> OnTokenMoved;
         public event Action<Token> OnTokenCreated;
         public event Action<Room> OnActiveRoomChanged;
+        public event Action<SessionPlayer> OnPlayerControlUpdated;
 
         private int nextRoomId = 1;
 
@@ -46,7 +49,7 @@ namespace Session
             
             movementService = new TokenMovementService();
 
-            Room firstRoom = CreateRoom("Sala Inicial", 10, 10);
+            Room firstRoom = CreateRoom("Sala Inicial", 20, 20);
             
             SwitchRoom(firstRoom);
         }
@@ -72,6 +75,7 @@ namespace Session
             Room newRoom = new Room(roomId, roomName, newBoard, mapData);
             
             gameSession.AddRoom(newRoom);
+            OnRoomCreated?.Invoke(newRoom);
             
             return newRoom;
         }
@@ -102,11 +106,11 @@ namespace Session
             bool wasActiveRoom = gameSession.ActiveRoom == room;
 
             gameSession.RemoveRoom(room);
-            
+            OnRoomDeleted?.Invoke(room);
+
             if (wasActiveRoom)
             {
-                gridManager.LoadRoom(gameSession.ActiveRoom);
-                
+                SwitchRoom(gameSession.ActiveRoom);
             }
         }
         
@@ -126,9 +130,7 @@ namespace Session
             OnActiveRoomChanged?.Invoke(room);
         }
         
-        public SessionPlayer AddPlayer(
-            string playerId,
-            string playerName)
+        public SessionPlayer AddPlayer(string playerId, string playerName)
         {
             if (gameSession == null)
             {
@@ -189,9 +191,7 @@ namespace Session
             );
         }
         
-        public void AssignTokenToPlayer(
-            SessionPlayer player,
-            string tokenId)
+        public void AssignTokenToPlayer(SessionPlayer player, string tokenId)
         {
             if (gameSession == null)
                 return;
@@ -212,9 +212,7 @@ namespace Session
             );
         }
         
-        public void RemoveTokenFromPlayer(
-            SessionPlayer player,
-            string tokenId)
+        public void RemoveTokenFromPlayer(SessionPlayer player, string tokenId)
         {
             if (gameSession == null)
                 return;
@@ -229,9 +227,7 @@ namespace Session
             );
         }
         
-        public bool CanPlayerControlToken(
-            SessionPlayer player,
-            Token token)
+        public bool CanPlayerControlToken(SessionPlayer player, Token token)
         {
             if (gameSession == null)
                 return false;
@@ -245,9 +241,7 @@ namespace Session
             return player.ControlsToken(token.Id);
         }
         
-        public bool MoveToken(
-            Token token,
-            GridCoordinate target)
+        public bool MoveToken(Token token, GridCoordinate target)
         {
             if (gameSession == null || token == null)
                 return false;
@@ -303,19 +297,17 @@ namespace Session
             return true;
         }
         
-        public bool HandleMoveTokenRequest(MoveTokenRequestMessage message)
+        public bool HandleMoveTokenRequest(SessionPlayer player,MoveTokenRequestMessage message)
         {
             if (gameSession == null || message == null)
                 return false;
-
-            SessionPlayer player = gameSession.GetPlayerById(message.PlayerId);
 
             Room room = gameSession.GetRoomById(message.RoomId);
 
             if (player == null)
             {
                 Debug.LogWarning(
-                    $"[MOVE] Player não encontrado: {message.PlayerId}"
+                    $"[MOVE] Player não encontrado"
                 );
 
                 return false;
@@ -424,11 +416,7 @@ namespace Session
             return true;
         }
         
-        public Token CreateToken(
-            string name,
-            GridCoordinate coordinate,
-            Faction faction,
-            int maxMovement)
+        public Token CreateToken(string name, GridCoordinate coordinate, Faction faction, int maxMovement)
         {
             Room activeRoom = GetActiveRoom();
 
@@ -456,6 +444,14 @@ namespace Session
             return token;
         }
         
+        public void NotifyPlayerControlUpdated(SessionPlayer player)
+        {
+            if (player == null)
+                return;
+
+            OnPlayerControlUpdated?.Invoke(player);
+        }
+        
         // MÉTODOS DE TESTES DE FEATURES, SERÃO REMOVIDOS OU ATUREADOS COMPLETAMENTE DEPOIS
         private void Update()
         {
@@ -474,25 +470,6 @@ namespace Session
                 Keyboard.current.deleteKey.wasPressedThisFrame)
             {
                 DeleteRoom(gameSession.ActiveRoom);
-            }
-            
-            if (Keyboard.current != null &&
-                Keyboard.current.pKey.wasPressedThisFrame)
-            {
-                AddPlayer(
-                    "player_teste_1",
-                    "Player Teste 1"
-                );
-
-                AddPlayer(
-                    "player_teste_2",
-                    "Player Teste 2"
-                );
-
-                AddPlayer(
-                    "player_teste_3",
-                    "Player Teste 3"
-                );
             }
             
         }

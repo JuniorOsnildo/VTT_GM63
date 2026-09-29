@@ -1,11 +1,11 @@
 ﻿using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
 using Core;
 using Session;
 using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
 
-namespace VTT.Unity
+namespace Unity.UI
 {
     public class TokenOptionsUI : MonoBehaviour
     {
@@ -27,9 +27,10 @@ namespace VTT.Unity
 
         private Token currentToken;
 
-        private readonly List<GameObject> createdPlayerEntries =
-            new List<GameObject>();
+        private readonly List<GameObject> createdPlayerEntries = new List<GameObject>();
 
+        private readonly HashSet<SessionPlayer> modifiedPlayers = new HashSet<SessionPlayer>();
+        
         private void Start()
         {
             Close();
@@ -41,6 +42,8 @@ namespace VTT.Unity
                 return;
 
             currentToken = token;
+            
+            modifiedPlayers.Clear();
 
             tokenNameText.text = token.Name;
 
@@ -51,6 +54,13 @@ namespace VTT.Unity
 
         public void Close()
         {
+            foreach (SessionPlayer player in modifiedPlayers)
+            {
+                sessionManager.NotifyPlayerControlUpdated(player);
+            }
+
+            modifiedPlayers.Clear();
+
             currentToken = null;
 
             ClearPlayerList();
@@ -126,6 +136,8 @@ namespace VTT.Unity
                             currentToken.Id
                         );
                     }
+                    
+                    modifiedPlayers.Add(player);
                 }
             );
         }

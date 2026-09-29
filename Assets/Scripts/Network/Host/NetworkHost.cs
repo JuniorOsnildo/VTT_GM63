@@ -46,6 +46,19 @@ namespace Network.Host
             sessionManager.OnTokenCreated += HandleTokenCreated;
             sessionManager.OnActiveRoomChanged += HandleActiveRoomChanged;
             sessionManager.OnTokenMoved += HandleTokenMoved;
+            sessionManager.OnPlayerControlUpdated += HandlePlayerControlUpdated;
+        }
+        
+        private void HandlePlayerControlUpdated(SessionPlayer player)
+        {
+            if (player == null)
+                return;
+
+            PlayerControlUpdatedMessage message = new PlayerControlUpdatedMessage(player.Id, player.ControlledTokenIds.ToArray());
+
+            string json = NetworkSerializer.SerializeMessage(message);
+
+            transport.Broadcast(json);
         }
         
         private void HandleTokenMoved(TokenMovedMessage message)
@@ -97,9 +110,7 @@ namespace Network.Host
             transport.Broadcast(json);
         }
 
-        private void HandleMessageReceived(
-            NetworkConnection connection,
-            string json)
+        private void HandleMessageReceived(NetworkConnection connection, string json)
         {
             NetworkMessageType messageType =
                 NetworkSerializer.GetMessageType(json);
@@ -108,11 +119,52 @@ namespace Network.Host
             {
                 HandleJoinRequest(connection, json);
             }
+            else if (messageType == NetworkMessageType.MoveTokenRequest)
+            {
+                HandleMoveTokenRequest(connection, json);
+            }
+        }
+        
+        private void HandleMoveTokenRequest(NetworkConnection connection, string json)
+        {
+            MoveTokenRequestMessage message =
+                NetworkSerializer.DeserializeMessage<MoveTokenRequestMessage>(
+                    json
+                );
+
+            if (message == null)
+            {
+                Debug.LogWarning(
+                    "[NETWORK HOST] MoveTokenRequest inválido."
+                );
+
+                return;
+            }
+
+            if (!playersByConnection.TryGetValue(
+                    connection.Id,
+                    out SessionPlayer player))
+            {
+                Debug.LogWarning(
+                    "[NETWORK HOST] MoveTokenRequest recebido de uma conexão sem jogador."
+                );
+
+                return;
+            }
+
+            Debug.Log(
+                $"[NETWORK HOST] MoveTokenRequest recebido: " +
+                $"{player.Name} → {message.TokenId} → " +
+                $"({message.TargetX}, {message.TargetY})"
+            );
+            
+            sessionManager.HandleMoveTokenRequest(
+                player,
+                message
+            );
         }
 
-        private void HandleJoinRequest(
-            NetworkConnection connection,
-            string json)
+        private void HandleJoinRequest(NetworkConnection connection, string json)
         {
             JoinRequestMessage message =
                 NetworkSerializer.DeserializeMessage<JoinRequestMessage>(
@@ -200,8 +252,7 @@ namespace Network.Host
             );
         }
         
-        private void HandleClientDisconnected(
-            NetworkConnection connection)
+        private void HandleClientDisconnected(NetworkConnection connection)
         {
             if (!playersByConnection.TryGetValue(
                     connection.Id,
@@ -235,6 +286,7 @@ namespace Network.Host
                 sessionManager.OnTokenCreated -= HandleTokenCreated;
                 sessionManager.OnActiveRoomChanged -= HandleActiveRoomChanged;
                 sessionManager.OnTokenMoved -= HandleTokenMoved;
+                sessionManager.OnPlayerControlUpdated -= HandlePlayerControlUpdated;
             }
         }
     }

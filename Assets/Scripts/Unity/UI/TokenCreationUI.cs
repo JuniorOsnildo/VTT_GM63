@@ -3,7 +3,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace VTT.Unity
+namespace Unity.UI
 {
     public class TokenCreationUI : MonoBehaviour
     {

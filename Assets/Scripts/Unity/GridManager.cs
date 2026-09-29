@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using Core;
 using Session;
@@ -7,20 +8,21 @@ namespace VTT.Unity
 {
     public class GridManager : MonoBehaviour
     {
-        //[SerializeField] private SessionManager sessionManager;
-        
-        [SerializeField] private int gridWidth = 10;
-        [SerializeField] private int gridHeight = 10;
+        private int gridWidth;
+        private int gridHeight;
         [SerializeField] private float cellSize = 1f;
         
         [SerializeField] private Material gridMaterial;
         [SerializeField] private Material tokenMaterial;
+        
+        public event Action OnMapLoaded;
         
         private TokenVisual playerToken;
         private BoardGrid boardGrid;
         
         private GameObject gridVisuals;
         private GameObject tokenVisuals;
+        
         private Dictionary<string, TokenVisual> tokenVisualById = new Dictionary<string, TokenVisual>();
         
         private MapData currentMapData;
@@ -51,6 +53,11 @@ namespace VTT.Unity
             visual.Initialize(token, this);
             tokenVisualById[token.Id] = visual;
             
+            if (boardGrid != null)
+            {
+                boardGrid.PlaceToken(token, token.Coordinates);
+            }
+            
             Physics.SyncTransforms();
 
             return visual;
@@ -78,11 +85,6 @@ namespace VTT.Unity
                 case Faction.Enemie: return Color.red;
                 default: return Color.blueViolet;
             }
-        }
-
-        public TokenVisual GetVisualToken()
-        {
-            return playerToken;
         }
         
         private void RenderGrid()
@@ -133,10 +135,7 @@ namespace VTT.Unity
         {
             if (mapData == null)
             {
-                Debug.LogWarning(
-                    "[GRID] Tentativa de carregar um mapa nulo."
-                );
-
+                Debug.LogWarning("[GRID] Tentativa de carregar um mapa nulo.");
                 return;
             }
 
@@ -159,7 +158,22 @@ namespace VTT.Unity
             gridWidth = mapData.Width;
             gridHeight = mapData.Height;
 
+            boardGrid = new BoardGrid(gridWidth, gridHeight);
+
+            for (int x = 0; x < gridWidth; x++)
+            {
+                for (int y = 0; y < gridHeight; y++)
+                {
+                    GridCoordinate coord = new GridCoordinate(x, y);
+                    TerrainTag terrainTag = mapData.GetTerrainAt(coord);
+                    TerrainType terrainType = TerrainDefinitions.Get(terrainTag).GameType;
+
+                    boardGrid.SetCell(coord, terrainType);
+                }
+            }
+
             RenderGrid();
+            OnMapLoaded?.Invoke();
         }
 
         public void LoadRoom(Room room)
@@ -200,6 +214,7 @@ namespace VTT.Unity
                 CreateTokenVisual(token);
             }
             
+            OnMapLoaded?.Invoke();
         }
         
         public BoardGrid GetGrid() => boardGrid;

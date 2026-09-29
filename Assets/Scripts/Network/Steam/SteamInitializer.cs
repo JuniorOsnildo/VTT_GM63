@@ -6,6 +6,8 @@ namespace Network.Steam
     public class SteamInitializer : MonoBehaviour
     {
         private bool initialized;
+        
+        [SerializeField] private SteamNetworkTransport networkTransport;
 
         private void Awake()
         {
@@ -42,11 +44,6 @@ namespace Network.Steam
             }
         }
 
-        private void OnApplicationQuit()
-        {
-            ShutdownSteam();
-        }
-
         private void OnDestroy()
         {
             ShutdownSteam();
@@ -57,12 +54,15 @@ namespace Network.Steam
             if (!initialized)
                 return;
 
+            if (networkTransport != null)
+                networkTransport.Stop();
+
             Debug.Log("[STEAM] Encerrando Steam API...");
 
             SteamAPI.Shutdown();
+
             initialized = false;
         }
-        
         
     }
 }
