@@ -1,5 +1,6 @@
 ﻿using System;
 using Core;
+using Network.DTO;
 using Network.Messages;
 using Network.Serialization;
 using UnityEngine;
@@ -10,8 +11,8 @@ namespace Session
 {
     public class SessionManager : MonoBehaviour
     {
-        [SerializeField]
-        private GridManager gridManager;
+        [SerializeField] private SaveManager saveManager;
+        [SerializeField] private GridManager gridManager;
         
         private GameSession gameSession;
         
@@ -26,7 +27,7 @@ namespace Session
         public event Action<TokenUpdatedMessage> OnTokenUpdated;
 
         private int nextRoomId = 1;
-
+        
         public GameSession GetGameSession()
         {
             return gameSession;
@@ -47,14 +48,25 @@ namespace Session
             gameSession = new GameSession();
 
             nextRoomId = 1;
-            
+
             movementService = new TokenMovementService();
 
+            if (saveManager != null)
+            {
+                SaveManager.SaveData saveData = saveManager.Load();
+
+                if (saveData != null && saveData.Rooms != null && saveData.Rooms.Length > 0)
+                {
+                    LoadFromSave(saveData);
+                    return;
+                }
+            }
+
             Room firstRoom = CreateRoom("Sala Inicial", 20, 20);
-            
+
             SwitchRoom(firstRoom);
         }
-
+        
         public Room CreateRoom(string roomName, int width, int height)
         {
             if (gameSession == null)
@@ -77,6 +89,8 @@ namespace Session
             
             gameSession.AddRoom(newRoom);
             OnRoomCreated?.Invoke(newRoom);
+            
+            saveManager?.Save(gameSession);
             
             return newRoom;
         }
@@ -441,6 +455,8 @@ namespace Session
                 return null;
 
             OnTokenCreated?.Invoke(token);
+            
+            saveManager?.Save(gameSession);
 
             return token;
         }
@@ -479,5 +495,42 @@ namespace Session
             return true;
         }
         
+        public void LoadFromSave(SaveManager.SaveData saveData)
+        {
+            if (saveData == null || saveData.Rooms == null || saveData.Rooms.Length == 0)
+                return;
+
+            int highestRoomId = 0;
+
+            foreach (RoomDTO roomDTO in saveData.Rooms)
+            {
+                Room room = DTOConverter.FromDTO(roomDTO);
+
+                if (room == null)
+                    continue;
+
+                gameSession.AddRoom(room);
+
+                string prefix = "room_";
+
+                if (room.Id.StartsWith(prefix))
+                {
+                    string numberPart = room.Id.Substring(prefix.Length);
+
+                    if (int.TryParse(numberPart, out int roomNumber))
+                    {
+                        if (roomNumber > highestRoomId)
+                            highestRoomId = roomNumber;
+                    }
+                }
+            }
+
+            nextRoomId = highestRoomId + 1;
+
+            Room activeRoom = gameSession.GetRoomById(saveData.ActiveRoomId);
+
+            if (activeRoom != null)
+                SwitchRoom(activeRoom);
+        }
     }
 }

@@ -28,11 +28,7 @@ namespace Session
             Tokens = new List<Token>();
         }
         
-        public Token CreateToken(
-            string name,
-            GridCoordinate coordinate,
-            Faction faction,
-            int maxMovement)
+        public Token CreateToken(string name, GridCoordinate coordinate, Faction faction, int maxMovement)
         {
             string tokenId = $"{Id}_token_{nextTokenId}";
             nextTokenId++;
@@ -60,6 +56,36 @@ namespace Session
             return Tokens.Find(
                 token => token.Id == tokenId
             );
+        }
+        
+        public void AddToken(Token token)
+        {
+            if (token == null)
+                return;
+
+            Tokens.Add(token);
+            Grid.PlaceToken(token, token.Coordinates);
+
+            UpdateNextTokenId(token.Id);
+        }
+        
+        private void UpdateNextTokenId(string tokenId)
+        {
+            if (string.IsNullOrEmpty(tokenId))
+                return;
+
+            string prefix = $"{Id}_token_";
+
+            if (!tokenId.StartsWith(prefix))
+                return;
+
+            string numberPart = tokenId.Substring(prefix.Length);
+
+            if (int.TryParse(numberPart, out int tokenNumber))
+            {
+                if (tokenNumber >= nextTokenId)
+                    nextTokenId = tokenNumber + 1;
+            }
         }
     }
 }

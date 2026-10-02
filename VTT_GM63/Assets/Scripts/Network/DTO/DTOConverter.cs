@@ -159,5 +159,59 @@ namespace Network.DTO
                 Players = players
             };
         }
+        
+        public static Room FromDTO(RoomDTO roomDTO)
+        {
+            if (roomDTO == null || roomDTO.Map == null)
+                return null;
+
+            MapData mapData = ToMapData(roomDTO.Map);
+
+            BoardGrid boardGrid = new BoardGrid(
+                mapData.Width,
+                mapData.Height
+            );
+
+            for (int y = 0; y < mapData.Height; y++)
+            {
+                for (int x = 0; x < mapData.Width; x++)
+                {
+                    GridCoordinate coordinate = new GridCoordinate(x, y);
+                    TerrainTag terrainTag = mapData.GetTerrainAt(coordinate);
+
+                    TerrainType terrainType = terrainTag switch
+                    {
+                        TerrainTag.Grass => TerrainType.Free,
+                        TerrainTag.Road => TerrainType.Free,
+                        TerrainTag.Stone => TerrainType.Difficult,
+                        TerrainTag.Hole => TerrainType.Difficult,
+                        TerrainTag.Tree => TerrainType.Blocked,
+                        _ => TerrainType.Free
+                    };
+
+                    boardGrid.SetCell(coordinate, terrainType);
+                }
+            }
+
+            Room room = new Room(
+                roomDTO.Id,
+                roomDTO.Name,
+                boardGrid,
+                mapData
+            );
+
+            if (roomDTO.Tokens != null)
+            {
+                for (int i = 0; i < roomDTO.Tokens.Length; i++)
+                {
+                    Token token = ToToken(roomDTO.Tokens[i]);
+
+                    if (token != null)
+                        room.AddToken(token);
+                }
+            }
+
+            return room;
+        }
     }
 }

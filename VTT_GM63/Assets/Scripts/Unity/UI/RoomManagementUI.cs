@@ -111,6 +111,9 @@ namespace VTT.Unity
             if (width <= 0 || height <= 0)
                 return;
 
+            if (width > 100 || height > 100)
+                return;
+            
             Room room = sessionManager.CreateRoom(roomName, width, height);
 
             if (room == null)
